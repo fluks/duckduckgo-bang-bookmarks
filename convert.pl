@@ -5,39 +5,42 @@ use v5.10;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 use English;
-use LWP::Simple;
 use LWP::UserAgent;
 use HTML::TokeParser;
-use Mojo::DOM;
 use URI;
+use IO::Handle;
+use open qw(:utf8 :std);
+use utf8;
 
-my $html = get_bangs_html();
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+my $ua = LWP::UserAgent->new(agent
+    => 'Mozilla/5.0 (Windows NT 6.1; rv:60.0) Gecko/20100101 Firefox/60.0');
+my $html = get_bangs_html($ua);
 my @bangs = get_bangs($html);
 
-my $bookmarks :shared = qq[<DT><H3 ADD_DATE="${\time()}">DDG Bang Bookmarks</H3>\n<DL><p>];
+open (my $bookmarks_fh, '>', 'ddg_bang_bookmarks.html')
+    || die "Can't open new bookmarks file for saving: $!";
+$bookmarks_fh->autoflush(1);
+say $bookmarks_fh qq[<DT><H3 ADD_DATE="${\time()}">DDG Bang Bookmarks</H3>\n<DL><p>];
 
-require Thread::Pool;
-my $pool = Thread::Pool->new({
-    workers => 20,
-    do => \&create_bookmark,
-    monitor => \&aggregate_bookmarks,
-});
-$pool->job($_) for @bangs;
-$pool->shutdown;
+my %bang_urls;
+for my $bang (@bangs) {
+    my $bm = create_bookmark($ua, $bang, \%bang_urls);
+    say $bookmarks_fh $bm if $bm;
 
-$bookmarks .= qq[</DL></p>];
-
-if (@ARGV == 1) {
-    add_bookmarks($bookmarks, $ARGV[0]);
-}
-else {
-    save_bookmarks($bookmarks);
+    # DDG limits traffic.
+    sleep(1);
 }
 
-sub get_bangs_html() {
+say $bookmarks_fh qq[</DL></p>];
+
+sub get_bangs_html($ua) {
     my $bangs_url = 'https://duckduckgo.com/bang_lite.html';
-    my $html = get($bangs_url);
-    if (!defined $html) {
+    my $res = $ua->get($bangs_url);
+    my $html = $res->decoded_content;
+    if (!$html) {
         die "Couldn't GET bangs page";
     }
 
@@ -57,59 +60,37 @@ sub get_bangs($html) {
     return $bangs =~ /\(!([^(]*)\)/g;
 }
 
-sub create_bookmark($bang) {    
-    my $ua = LWP::UserAgent->new(agent
-        => 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0');
-    my $search_url = 'https://duckduckgo.com/html/?q=';
-    my $query = 'mynotrandomtext';
-    # DDG limits traffic.
-    sleep(1);
-    my $res = $ua->get($search_url . "!$bang $query");
-    if ($res->is_success && $res->decoded_content) {
-        my $dom = Mojo::DOM->new($res->decoded_content);
-        my $title = $dom->at('title');
-        if ($title) {
-            $title = $title->text;
-            $title =~ s/$query//;
-        }
-        else {
-            $title = URI->new($res->base)->host;
-        }
+sub create_bookmark($ua, $bang, $bang_urls) {
+    my $url;
+    $ua->add_handler(response_done => sub ($response, $ua, $h) {
+        my $u = $response->header('location');
+        $url = $u if $u && !$url;
+    });
 
-        my $url = $res->base;
-        $url =~ s/$query/%s/;
+    my $search_url = 'https://duckduckgo.com/html/?q=';
+    my $query = 'MYNOTRANDOMTEXT';
+    my $res = $ua->get($search_url . "!$bang $query");
+
+    if ($url) {
+        say "$bang $url";
+
+        my $host = URI->new($url)->host;
+        my $title = "!$bang @ $host";
+
+        $url =~ s/$query/%s/g;
+        $bang_urls->{$url}++;
+        # If there are bangs with the same URL, but different keyword, all
+        # bangs will have the same keyword after importing them. Add fragment
+        # identifier(s) when there are multiple bangs with the same URL.
+        $url .= '#' x ($bang_urls->{$url} - 1);
 
         my $add_time = time();
-        my $bm_entry = qq[<DT><A HREF="$url" ADD_DATE="$add_time" SHORTCUTURL="$bang">$title</A>\n];
+        my $bm_entry = qq[<DT><A HREF="$url" ADD_DATE="$add_time" SHORTCUTURL="$bang">$title</A>];
 
         return $bm_entry;
     }
-}
-
-sub aggregate_bookmarks($bm_entry) {
-    STDOUT->autoflush(1);
-    say $bm_entry;
-    if ($bm_entry) {
-        lock($bookmarks);
-        say $bm_entry;
-        $bookmarks .= $bm_entry;
+    else {
+        say STDERR "Error searching with a $bang: " . $res->status_line;
+        return undef;
     }
-}
-
-sub add_bookmarks($bookmarks, $bookmarks_file) {
-    local undef $INPUT_RECORD_SEPARATOR;
-    open (my $fh, '<', $bookmarks_file)
-        || die "Can't open bookmarks for reading: $!";
-    my $dom = Mojo::DOM->new(<$fh>);
-    $dom->find('h3')->last->append($bookmarks);
-    
-    open (my $fh_new, '>', 'bookmarks_and_ddg_bang_bookmarks.html')
-        || die "Can't open new bookmarks file: $!";
-    say $fh_new "$dom"; 
-}
-
-sub save_bookmarks($bookmarks) {
-    open(my $fh, '>', 'ddg_bang_bookmarks.html')
-        || die "Can't open new bookrmaks file for saving: $!";
-    print $fh $bookmarks;
 }
