@@ -10,6 +10,7 @@ in the [bookmarks file](ddg_bang_bookmarks.html).
 # Requirements
 
 * HTML::TokeParser
+
 Probably Needed
 * Tor
 * torify
