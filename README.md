@@ -5,7 +5,7 @@ saved as HTML bookmarks and you can import them to Firefox.
 
 Well, not all bangs, because there are problems connecting to Tor and some
 other problems too. There are 9886 bangs on DuckDuckGo and 9342 currently
-in [](ddg_bang_bookmarks.html) file.
+in the [bookmarks file](ddg_bang_bookmarks.html).
 
 # Requirements
 
