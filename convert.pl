@@ -31,7 +31,7 @@ for my $bang (@bangs) {
     say $bookmarks_fh $bm if $bm;
 
     # DDG limits traffic.
-    sleep(1);
+    sleep(10);
 }
 
 say $bookmarks_fh qq[</DL></p>];
