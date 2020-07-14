@@ -68,7 +68,7 @@ sub create_bookmark($ua, $bang, $bang_urls) {
     });
 
     my $search_url = 'https://duckduckgo.com/html/?q=';
-    my $query = 'MYNOTRANDOMTEXT';
+    my $query = random_text(16);
     my $res = $ua->get($search_url . "!$bang $query");
 
     if ($url) {
@@ -93,4 +93,13 @@ sub create_bookmark($ua, $bang, $bang_urls) {
         say STDERR "Error searching with a $bang: " . $res->status_line;
         return undef;
     }
+}
+
+sub random_text($n) {
+    my $s = '';
+    for (1 .. $n) {
+        my @chars = ('a' .. 'z', 1 .. 9);
+        $s .= $chars[rand() * scalar @chars];
+    }
+    return $s;
 }
