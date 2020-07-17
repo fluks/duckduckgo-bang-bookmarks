@@ -13,7 +13,7 @@ in the [bookmarks file](ddg_bang_bookmarks.html).
 
 Probably Needed
 * Tor
-* torify
+* torsocks
 
 # Usage
 
@@ -22,7 +22,13 @@ and simply limiting requests doesn't seem to work that well or I don't know how
 long time between requests there should be. Saves bangs in
 ddg_bang_bookmarks.html. Running the script takes many hours.
 
-`torify ./convert.pl`
+`torsocks ./convert.pl`
+
+If you want to append new bangs.
+
+`torsocks ./convert.pl <OLD_BOOKMARKS_FILE>`
+
+Then move the new bangs inside the DL tags.
 
 Then in Firefox open bookmarks.
 

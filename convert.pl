@@ -8,6 +8,7 @@ use English;
 use LWP::UserAgent;
 use HTML::TokeParser;
 use URI;
+use URI::Escape;
 use IO::Handle;
 use open qw(:utf8 :std);
 use utf8;
@@ -16,17 +17,27 @@ STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
 my $ua = LWP::UserAgent->new(agent
-    => 'Mozilla/5.0 (Windows NT 6.1; rv:60.0) Gecko/20100101 Firefox/60.0');
+    => 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0');
 my $html = get_bangs_html($ua);
 my @bangs = get_bangs($html);
 
-open (my $bookmarks_fh, '>', 'ddg_bang_bookmarks.html')
-    || die "Can't open new bookmarks file for saving: $!";
+my $write_mode = '>';
+if (scalar @ARGV == 1) {
+    $write_mode = '>>';
+}
+open (my $bookmarks_fh, $write_mode, 'ddg_bang_bookmarks.html')
+    || die "Can't open bookmarks file for saving: $!";
 $bookmarks_fh->autoflush(1);
-say $bookmarks_fh qq[<DT><H3 ADD_DATE="${\time()}">DDG Bang Bookmarks</H3>\n<DL><p>];
+if ($write_mode eq '>') {
+    say $bookmarks_fh qq[<DT><H3 ADD_DATE="${\time()}">DDG Bang Bookmarks</H3>\n<DL><p>];
+}
 
 my %bang_urls;
 for my $bang (@bangs) {
+    if ($write_mode eq '>>' && bang_exists($bang)) {
+        next;
+    }
+
     my $bm = create_bookmark($ua, $bang, \%bang_urls);
     say $bookmarks_fh $bm if $bm;
 
@@ -35,6 +46,15 @@ for my $bang (@bangs) {
 }
 
 say $bookmarks_fh qq[</DL></p>];
+
+sub bang_exists($bang) {
+    my $p = HTML::TokeParser->new($ARGV[0])
+        || die "Can't parse previous bookmarks file: $!";
+
+    while (my $a = $p->get_tag('a')) {
+        return 1 if @$a[1]->{shortcuturl} eq $bang;
+    }
+}
 
 sub get_bangs_html($ua) {
     my $bangs_url = 'https://duckduckgo.com/bang_lite.html';
@@ -61,15 +81,17 @@ sub get_bangs($html) {
 }
 
 sub create_bookmark($ua, $bang, $bang_urls) {
-    my $url;
-    $ua->add_handler(response_done => sub ($response, $ua, $h) {
-        my $u = $response->header('location');
-        $url = $u if $u && !$url;
-    });
-
-    my $search_url = 'https://duckduckgo.com/html/?q=';
+    my $search_url = 'https://duckduckgo.com/?q=';
     my $query = random_text(16);
     my $res = $ua->get($search_url . "!$bang $query");
+    my $html = $res->decoded_content;
+    my $url;
+    if ($html =~ /uddg=(.+?)'/) {
+        $url = uri_unescape($1);
+    }
+    elsif ($html =~ /url=(.+?)'/){
+        $url = $1;
+    }
 
     if ($url) {
         say "$bang $url";
