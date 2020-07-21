@@ -4,8 +4,9 @@ Use DuckDuckGo bangs without connecting to DuckDuckGo at all. The bangs are
 saved as HTML bookmarks and you can import them to Firefox.
 
 Well, not all bangs, because there are problems connecting to Tor and some
-other problems too. There are 9886 bangs on DuckDuckGo and 9342 currently
-in the [bookmarks file](ddg_bang_bookmarks.html).
+other problems too. There are 13505 bangs on DuckDuckGo and 13511 currently
+in the [bookmarks file](ddg_bang_bookmarks.html), meaning some of the bangs in the
+file are probably old.
 
 # Requirements
 
