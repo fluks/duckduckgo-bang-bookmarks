@@ -3,33 +3,13 @@
 Use DuckDuckGo bangs without connecting to DuckDuckGo at all. The bangs are
 saved as HTML bookmarks and you can import them to Firefox.
 
-Well, not all bangs, because there are problems connecting to Tor and some
-other problems too. There are 13505 bangs on DuckDuckGo and 13511 currently
-in the [bookmarks file](ddg_bang_bookmarks.html), meaning some of the bangs in the
-file are probably old.
-
 # Requirements
 
-* HTML::TokeParser
-
-Probably Needed
-* Tor
-* torsocks
+* Python3
 
 # Usage
 
-Run the script with Tor. This is needed because DuckDuckGo rate limits traffic
-and simply limiting requests doesn't seem to work that well or I don't know how
-long time between requests there should be. Saves bangs in
-ddg_bang_bookmarks.html. Running the script takes many hours.
-
-`torsocks ./convert.pl`
-
-If you want to append new bangs.
-
-`torsocks ./convert.pl <OLD_BOOKMARKS_FILE>`
-
-Then move the new bangs inside the DL tags.
+`python3 ddg_json_bangs_to_ff_bookmarks.py bang.v260.js <out file>`
 
 Then in Firefox open bookmarks.
 
