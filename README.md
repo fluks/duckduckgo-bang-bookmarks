@@ -11,6 +11,9 @@ saved as HTML bookmarks and you can import them to Firefox.
 
 `python3 ddg_json_bangs_to_ff_bookmarks.py bang.v260.js <out file>`
 
+Or you can just download the [bangs.html file](https://github.com/fluks/duckduckgo-bang-bookmarks/blob/master/bangs.html?raw=true)
+I already created.
+
 Then in Firefox open bookmarks.
 
 `Bookmarks > Show All Bookmarks`
